@@ -20,16 +20,31 @@ pool.query('SELECT NOW()', (err) => {
   else console.log("🐘 Conexión a PostgreSQL (Neon) exitosa.");
 });
 
-// --- RUTA PARA GUARDAR REGISTROS (La que usa tu botón GUARDAR) ---
+// --- RUTA PARA GUARDAR REGISTROS (AHORA INSERTA EN NEON) ---
 app.post('/api/registros', async (req, res) => {
   const { luz, agua, organicos, inorganicos, otros } = req.body;
   try {
-    // Aquí podrías insertar en una tabla llamada 'registros'
-    // Por ahora, simulamos éxito para que tu botón funcione
-    console.log("Datos recibidos:", req.body);
-    res.json({ success: true, message: "Datos recibidos en el servidor" });
+    const query = `
+      INSERT INTO registros (empresa_id, luz, agua, organicos, inorganicos, otros, fecha_registro)
+      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+    `;
+    // Usamos empresa_id = 1 por defecto
+    await pool.query(query, [1, luz, agua, organicos, inorganicos, otros]);
+    
+    res.json({ success: true, message: "Datos guardados en Neon" });
   } catch (err) {
+    console.error("❌ Error al insertar:", err.message);
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- RUTA PARA OBTENER EL HISTORIAL (NUEVA) ---
+app.get('/api/registros', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM registros ORDER BY fecha_registro DESC LIMIT 10');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
