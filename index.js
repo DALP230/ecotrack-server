@@ -64,18 +64,35 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// --- RUTA DE REGISTRO ---
-app.post('/api/register', async (req, res) => {
+// RUTA DE REGISTRO
+app.post('/api/registro', async (req, res) => {
   const { nombre, correo, password } = req.body;
   try {
-    const query = `
-      INSERT INTO usuarios (empresa_id, nombre, correo, password, rol, acepto_privacidad, fecha_registro) 
-      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-    `;
-    await pool.query(query, [1, nombre, correo, password, 'administrador', true]);
-    res.status(201).json({ success: true });
+    const result = await pool.query(
+      'INSERT INTO usuarios (nombre, correo, password) VALUES ($1, $2, $3) RETURNING *',
+      [nombre, correo, password]
+    );
+    res.json(result.rows[0]);
   } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(500).json({ message: "El correo ya está registrado" });
+  }
+});
+
+// RUTA DE LOGIN
+app.post('/api/login', async (req, res) => {
+  const { correo, password } = req.body;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM usuarios WHERE correo = $1 AND password = $2',
+      [correo, password]
+    );
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(401).json({ message: "Credenciales incorrectas" });
+    }
+  } catch (err) {
+    res.status(500).json({ message: "Error en el servidor" });
   }
 });
 
